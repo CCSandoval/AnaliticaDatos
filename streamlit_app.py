@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 import joblib
 
-
+years_ahead = 10
 MODEL_PATH = Path('models/linear_regression_advanced.joblib')
 
 
@@ -63,7 +63,7 @@ def build_mock_data():
 def main():
 	st.title('Predicciones de Producción de Café')
 
-	st.markdown('Carga el modelo entrenado y los datos históricos exportados localmente. Selecciona un país para ver la predicción de los próximos 5 años.')
+	st.markdown(f'Carga el modelo entrenado y los datos históricos exportados localmente. Selecciona un país para ver la predicción de los próximos {years_ahead} años.')
 
 	model = load_model(MODEL_PATH)
 	if model is None:
@@ -93,18 +93,20 @@ def main():
 
 	st.subheader(f'Histórico de producción - {country}')
 	st.line_chart(history.set_index('year')['production'])
-	st.dataframe(history[['year', 'production']].reset_index(drop=True))
+	# More readable headers for the historical table
+	df_hist_display = history[['year', 'production']].reset_index(drop=True).rename(columns={
+		'year': 'Año',
+		'production': 'Producción (kg)'
+	})
+	st.dataframe(df_hist_display)
 
 	# Prepare production history list
 	production_history = history['production'].astype(float).tolist()
 	last_year = int(history['year'].max())
 
-	# Iterative prediction for next 5 years using the same feature engineering as the notebook
-	years_ahead = 5
-	predictions = []
+	predictions = [{'year': last_year, 'predicted_production': float(production_history[-1])}]
 
 	for i in range(1, years_ahead + 1):
-		# compute features from the last available values
 		recent = production_history[-3:]
 		rolling_mean = float(np.mean(recent))
 		rolling_std = float(np.std(recent))
@@ -129,18 +131,24 @@ def main():
 
 	df_preds = pd.DataFrame(predictions)
 
-	st.subheader('Predicción (próximos 5 años)')
-	st.table(df_preds)
+	st.subheader(f'Predicción (próximos {years_ahead} años)')
+	# Show only the future years in the table (exclude the anchor last_year)
+	df_preds_future = df_preds[df_preds['year'] > last_year].reset_index(drop=True).rename(columns={
+		'year': 'Año',
+		'predicted_production': 'Predicción (kg)'
+	})
+	st.table(df_preds_future)
 
-	# Combined chart
-	combined = pd.concat([
-		history[['year', 'production']].rename(columns={'production': 'value'}),
-		df_preds.rename(columns={'predicted_production': 'value'})
-	], ignore_index=True)
-	combined = combined.sort_values('year')
-	combined = combined.set_index('year')
-	st.subheader('Histórico + Predicción')
-	st.line_chart(combined['value'])
+	# Combined chart with separate series for historical vs prediction
+	hist_df = history[['year', 'production']].rename(columns={'production': 'historical'}).set_index('year')
+	pred_df = df_preds.rename(columns={'predicted_production': 'prediction'}).set_index('year')
+
+	combined = pd.concat([hist_df, pred_df], axis=1)
+	# Ensure years are sorted
+	combined = combined.sort_index()
+
+	st.subheader('Histórico vs Predicción')
+	st.line_chart(combined)
 
 
 if __name__ == '__main__':
