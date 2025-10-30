@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import joblib
+import traceback
+import sys
 
 years_ahead = 10
 MODEL_PATH = Path('models/linear_regression_advanced.joblib')
@@ -17,48 +19,6 @@ def load_model(path: Path):
 			st.error(f"Error cargando el modelo: {e}")
 			return None
 	return None
-
-
-def build_mock_data():
-	"""Construye datos ficticios por país y calcula las 6 features usadas por el modelo.
-
-	Cada país tiene un pequeño historial de producción; calculamos rolling mean/std
-	sobre los últimos 3 años, lag1, pct_change, interacción mean_x_pct y volatility_norm.
-	"""
-	mocked = [
-		{"country_name": "Country A", "history": [950, 1000, 1100]},
-		{"country_name": "Country B", "history": [2000, 1900, 1950]},
-		{"country_name": "Country C", "history": [300, 400, 350]},
-		{"country_name": "Country D", "history": [1200, 1250, 1300]},
-	]
-
-	rows = []
-	for entry in mocked:
-		name = entry['country_name']
-		hist = entry['history']
-		# asegurar al menos 3 valores
-		recent = hist[-3:]
-		rolling_mean = float(np.mean(recent))
-		rolling_std = float(np.std(recent))
-		prod_lag1 = float(recent[-1])
-		pct_change = 0.0
-		if len(recent) >= 2 and recent[-2] != 0:
-			pct_change = float((recent[-1] - recent[-2]) / recent[-2])
-		mean_x_pct = rolling_mean * pct_change
-		volatility_norm = rolling_std / (rolling_mean + 1) if rolling_mean > 0 else 0.0
-
-		rows.append({
-			'country_name': name,
-			'rolling_mean_3y': rolling_mean,
-			'rolling_std_3y': rolling_std,
-			'production_lag1': prod_lag1,
-			'pct_change_1y': pct_change,
-			'mean_x_pct': mean_x_pct,
-			'volatility_norm': volatility_norm,
-		})
-
-	return pd.DataFrame(rows)
-
 
 def main():
 	st.title('Predicciones de Producción de Café')
@@ -152,4 +112,14 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+	try:
+		main()
+	except Exception as e:
+		tb = traceback.format_exc()
+		try:
+			st.error('La aplicación encontró un error al iniciarse. Revisa el detalle abajo.')
+			st.code(tb)
+		except Exception:
+			# If Streamlit isn't available for UI rendering, print to stderr so platform logs capture it.
+			print('FATAL ERROR - no se pudo renderizar el error en Streamlit UI', file=sys.stderr)
+			print(tb, file=sys.stderr)
