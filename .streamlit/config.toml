@@ -1,0 +1,10 @@
+[theme]
+primaryColor = "#8B5E3C"            # brown primary
+backgroundColor = "#1E1B18"         # very dark brown/near-black background
+secondaryBackgroundColor = "#2B2623"# slightly lighter brown for panels
+textColor = "#EDE6E0"               # warm off-white text
+font = "sans serif"
+base = "dark"
+
+[server]
+headless = true
