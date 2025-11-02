@@ -8,3 +8,14 @@ base = "dark"
 
 [server]
 headless = true
+enableWebsocketCompression = true
+enableCORS = true
+enableXsrfProtection = true
+maxUploadSize = 200
+fileWatcherType = "auto"
+
+[browser]
+gatherUsageStats = false
+
+[runner]
+fastReruns = true

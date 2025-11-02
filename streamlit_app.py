@@ -6,6 +6,14 @@ import joblib
 import traceback
 import sys
 
+# Configure Streamlit page for better mobile compatibility
+st.set_page_config(
+    page_title="Predicción de Café",
+    page_icon="☕️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
 years_ahead = 10
 MODEL_PATH = Path('models/linear_regression_advanced.joblib')
 
@@ -21,22 +29,30 @@ def load_model(path: Path):
 	return None
 
 def main():
-	st.title('Predicciones de Producción de Café')
+	# Add a simple status indicator
+	with st.spinner('Cargando aplicación...'):
+		pass
+	
+	st.title('☕️ Predicciones de Producción de Café')
 
 	st.markdown(f'Carga el modelo entrenado y los datos históricos exportados localmente. Selecciona un país para ver la predicción de los próximos {years_ahead} años.')
+
+	# Initialize session state for better stability
+	if 'initialized' not in st.session_state:
+		st.session_state.initialized = True
 
 	model = load_model(MODEL_PATH)
 	if model is None:
 		st.warning(f"No se encontró el modelo en '{MODEL_PATH}'. Ejecuta el notebook para entrenar y guardarlo en esa ruta.")
-		st.stop()
+		return
 
 	# Load exported data
 	prod_path = Path('data/prediction_data/production_long.csv')
 	countries_path = Path('data/prediction_data/countries.csv')
 
 	if not prod_path.exists() or not countries_path.exists():
-		st.warning('No se encontraron los CSV exportados en data/prediction_data/. Ejecuta scripts/export_production_data.py primero.')
-		st.stop()
+		st.warning('No se encontraron los CSV exportados en data/prediction_data/')
+		return
 
 	df_long = pd.read_csv(prod_path)
 	df_countries = pd.read_csv(countries_path)
@@ -49,7 +65,7 @@ def main():
 	history = df_long[df_long['country_name'] == country].sort_values('year')
 	if history.empty:
 		st.info('No hay datos históricos para el país seleccionado.')
-		st.stop()
+		return
 
 	st.subheader(f'Histórico de producción - {country}')
 	st.line_chart(history.set_index('year')['production'])
@@ -58,7 +74,6 @@ def main():
 		'year': 'Año',
 		'production': 'Producción (kg)'
 	})
-	st.dataframe(df_hist_display)
 
 	# Prepare production history list
 	production_history = history['production'].astype(float).tolist()
@@ -107,7 +122,7 @@ def main():
 	# Ensure years are sorted
 	combined = combined.sort_index()
 
-	st.subheader('Histórico vs Predicción')
+	st.subheader(f'Histórico vs Predicción {country}')
 	st.line_chart(combined)
 
 
