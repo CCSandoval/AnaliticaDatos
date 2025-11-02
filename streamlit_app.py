@@ -10,7 +10,6 @@ import sys
 st.set_page_config(
     page_title="Predicción de Café",
     page_icon="☕️",
-    layout="wide",
     initial_sidebar_state="collapsed"
 )
 
